@@ -1,3 +1,4 @@
+print("APP INICIANDO...")
 from flask import Flask, render_template, request, redirect, url_for, session
 import sqlite3
 import datetime
@@ -6,10 +7,12 @@ import os
 app = Flask(__name__)
 app.secret_key = "ferreteria_secret_key"
 
-DB = "ferreteria_web.db"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DB = os.path.join(BASE_DIR, "ferreteria_web.db")
+
 
 def crear_base():
-    conn = sqlite3.connect(DB)
+    conn = sqlite3.connect(DB, check_same_thread=False)
     cursor = conn.cursor()
 
     cursor.execute("""
@@ -38,20 +41,25 @@ def crear_base():
     conn.commit()
     conn.close()
 
-crear_base()
+
+# Ejecutar creación de base correctamente
+with app.app_context():
+    crear_base()
+
 
 @app.route("/")
 def login():
     return render_template("login.html")
+
 
 @app.route("/login", methods=["POST"])
 def validar_login():
     usuario = request.form["usuario"]
     password = request.form["password"]
 
-    conn = sqlite3.connect(DB)
+    conn = sqlite3.connect(DB, check_same_thread=False)
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM usuarios WHERE usuario=? AND password=?", (usuario,password))
+    cursor.execute("SELECT * FROM usuarios WHERE usuario=? AND password=?", (usuario, password))
     user = cursor.fetchone()
     conn.close()
 
@@ -62,11 +70,13 @@ def validar_login():
     else:
         return "Usuario o contraseña incorrectos"
 
+
 @app.route("/panel")
 def panel():
     if "usuario" not in session:
         return redirect(url_for("login"))
     return render_template("panel.html", usuario=session["usuario"], rol=session["rol"])
+
 
 @app.route("/crear_pedido", methods=["POST"])
 def crear_pedido():
@@ -77,26 +87,30 @@ def crear_pedido():
     cantidad = request.form["cantidad"]
     fecha = str(datetime.datetime.now())
 
-    conn = sqlite3.connect(DB)
+    conn = sqlite3.connect(DB, check_same_thread=False)
     cursor = conn.cursor()
-    cursor.execute("INSERT INTO pedidos VALUES (NULL,?,?,?,?)",
-                   (session["usuario"],producto,cantidad,fecha))
+    cursor.execute(
+        "INSERT INTO pedidos VALUES (NULL,?,?,?,?)",
+        (session["usuario"], producto, cantidad, fecha)
+    )
     conn.commit()
     conn.close()
 
     return redirect(url_for("panel"))
 
+
 @app.route("/historial")
 def historial():
-    conn = sqlite3.connect(DB)
+    conn = sqlite3.connect(DB, check_same_thread=False)
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM pedidos")
     pedidos = cursor.fetchall()
     conn.close()
     return render_template("historial.html", pedidos=pedidos)
 
-import os
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
+    app.run(debug=True)
+@app.route("/")
+def home():
+    return "OK"
