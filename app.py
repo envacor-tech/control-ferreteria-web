@@ -71,6 +71,10 @@ def validar_login():
         return "Usuario o contraseña incorrectos"
 
 
+@app.route("/")
+def home():
+    return "OK"
+
 @app.route("/panel")
 def panel():
     if "usuario" not in session:
